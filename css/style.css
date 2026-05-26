@@ -1,0 +1,479 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    font-family: 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, -apple-system, sans-serif;
+    background: #f0f2f5;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+.toolbar {
+    background: linear-gradient(135deg, #1a2740 0%, #2c3e66 100%);
+    padding: 10px 20px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-bottom: 2px solid #3a5a8c;
+    position: relative;
+}
+.toolbar-title {
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.toolbar-sub {
+    color: rgba(255,255,255,0.65);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+}
+.toolbar .status {
+    margin-left: auto;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 500;
+    background: rgba(255,255,255,0.1);
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+.map-selector-label {
+    color: rgba(255,255,255,0.75);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+}
+.map-selector {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: rgba(255,255,255,0.95);
+    color: #1a2740;
+    border: 2px solid rgba(255,255,255,0.6);
+    padding: 6px 32px 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    transition: 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a6c7e' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.map-selector:hover, .map-selector:focus {
+    border-color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.map-selector option {
+    background: #fff;
+    color: #1a2740;
+    padding: 8px;
+}
+#container {
+    flex: 1;
+    background: #fefefe;
+    position: relative;
+    overflow: hidden;
+}
+svg {
+    background-color: #fafcfd;
+    cursor: grab;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+svg:active {
+    cursor: grabbing;
+}
+
+/* 缩放控制按钮 */
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 5;
+}
+.zoom-controls button {
+    width: 57px;
+    height: 57px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.92);
+    color: #333;
+    font-size: 30px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, box-shadow 0.15s;
+    line-height: 1;
+    padding: 0;
+}
+.zoom-controls button:hover {
+    background: #e8f0fe;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.22);
+}
+.zoom-controls button:active {
+    background: #d2e3fc;
+}
+
+/* 节点悬浮提示样式 */
+.station-circle, .station-rect {
+    transition: stroke-width 0.1s, filter 0.1s;
+    cursor: pointer;
+}
+.station-circle:hover, .station-rect:hover {
+    stroke-width: 3;
+    filter: drop-shadow(0 0 4px rgba(0,0,0,0.3));
+}
+.station-label {
+    font-size: 11px;
+    font-weight: normal;
+    dominant-baseline: middle;
+    pointer-events: none;
+    text-shadow: 0 0 2px white, 0 0 2px white;
+    user-select: none;
+}
+.station-label-en {
+    font-size: 7.5px;
+    fill: #7a8a9a;
+    letter-spacing: 0.2px;
+}
+.tooltip-dive {
+    position: fixed;
+    background: rgba(0,0,0,0.75);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    font-family: monospace;
+    backdrop-filter: blur(4px);
+    transition: 0.05s linear;
+}
+.legend-text, .misc-text {
+    pointer-events: none;
+    user-select: none;
+}
+.facility-icon {
+    pointer-events: none;
+}
+@keyframes fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 欢迎弹窗 */
+.welcome-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadein 0.25s ease;
+}
+.welcome-modal {
+    background: #fff;
+    border-radius: 16px;
+    max-width: 540px;
+    width: 92%;
+    padding: 36px 32px 28px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.28);
+    position: relative;
+}
+.welcome-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #f0f2f5;
+    border-radius: 50%;
+    font-size: 17px;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+    padding: 0;
+}
+.welcome-close:hover {
+    background: #e0e3e8;
+    color: #333;
+}
+.welcome-modal p {
+    font-size: 16px;
+    line-height: 1.9;
+    color: #2c3e50;
+    margin: 0 0 22px 0;
+}
+.welcome-confirm {
+    display: block;
+    width: 100%;
+    padding: 11px 0;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1a2740, #2c3e66);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.welcome-confirm:hover {
+    opacity: 0.85;
+}
+.welcome-link {
+    color: #2c6fbb;
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1.5px solid rgba(44,111,187,0.3);
+    transition: border-color 0.15s, color 0.15s;
+}
+.welcome-link:hover {
+    color: #1a4f8b;
+    border-bottom-color: #1a4f8b;
+}
+.info-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.85);
+    font-size: 16px;
+    font-weight: 700;
+    font-style: italic;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.info-btn:hover {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.6);
+}
+
+/* 左下角时钟组件 */
+.clock-widget {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 5;
+    background: rgba(18, 25, 45, 0.82);
+    backdrop-filter: blur(12px);
+    border-radius: 1.2rem;
+    padding: 14px 14px 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    text-align: center;
+    user-select: none;
+}
+.clock-widget canvas {
+    display: block;
+    width: 330px;
+    height: 330px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 0 0 2px rgba(255,255,240,0.15);
+    background: radial-gradient(circle at 30% 30%, #fffcf0, #f7f2e0);
+    cursor: pointer;
+    margin: 0 auto;
+}
+.clock-tz-bar {
+    background: rgba(0,0,0,0.4);
+    border-radius: 2rem;
+    padding: 3px 10px;
+    margin: 8px 0 6px;
+    display: inline-block;
+}
+.clock-tz-label {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: #f9f3d9;
+}
+.clock-select-label {
+    display: block;
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 3px;
+}
+.clock-select {
+    width: 100%;
+    background: rgba(30,42,58,0.9);
+    border: 1px solid rgba(95,127,158,0.6);
+    color: #f0f3fa;
+    padding: 5px 10px;
+    border-radius: 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: 0.2s;
+    font-family: inherit;
+}
+.clock-select:hover {
+    border-color: rgba(138,173,204,0.8);
+}
+.clock-select:focus {
+    border-color: #6d9eff;
+    box-shadow: 0 0 0 2px rgba(109,158,255,0.3);
+}
+.clock-select option {
+    background: #1e2a3a;
+    color: #f0f3fa;
+}
+
+/* ========== 移动端适配 ========== */
+
+@media (max-width: 768px) {
+    .toolbar {
+        padding: 8px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+    .toolbar-title {
+        position: static;
+        transform: none;
+        font-size: 14px;
+        width: 100%;
+        text-align: center;
+        order: -1;
+        margin-bottom: 2px;
+    }
+    .toolbar .status {
+        font-size: 10px;
+        padding: 3px 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
+    }
+    .map-selector-label {
+        font-size: 12px;
+    }
+    .map-selector {
+        font-size: 12px;
+        padding: 5px 28px 5px 10px;
+    }
+    .info-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+
+    /* 时钟缩小 */
+    .clock-widget {
+        bottom: 12px;
+        left: 12px;
+        padding: 8px 10px 8px;
+        border-radius: 1rem;
+    }
+    .clock-widget canvas {
+        width: 130px;
+        height: 130px;
+    }
+    .clock-tz-label {
+        font-size: 1rem;
+        letter-spacing: 1px;
+    }
+    .clock-tz-bar {
+        padding: 2px 8px;
+        margin: 5px 0 4px;
+    }
+    .clock-select {
+        font-size: 0.75rem;
+        padding: 3px 6px;
+    }
+
+    /* 缩放按钮缩小 */
+    .zoom-controls {
+        bottom: 12px;
+        right: 12px;
+        gap: 6px;
+    }
+    .zoom-controls button {
+        width: 44px;
+        height: 44px;
+        font-size: 24px;
+        border-radius: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .toolbar {
+        padding: 6px 10px;
+        gap: 6px;
+    }
+    .toolbar-title {
+        font-size: 13px;
+    }
+    .toolbar .status {
+        max-width: 90px;
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+    .map-selector {
+        font-size: 11px;
+        padding: 4px 24px 4px 8px;
+    }
+
+    .clock-widget canvas {
+        width: 100px;
+        height: 100px;
+    }
+    .clock-tz-label {
+        font-size: 0.85rem;
+    }
+    .clock-select {
+        font-size: 0.7rem;
+    }
+
+    .zoom-controls button {
+        width: 38px;
+        height: 38px;
+        font-size: 20px;
+    }
+
+    .welcome-modal {
+        padding: 24px 20px 20px;
+    }
+    .welcome-modal p {
+        font-size: 14px;
+        line-height: 1.7;
+        margin-bottom: 16px;
+    }
+    .welcome-confirm {
+        padding: 10px 0;
+        font-size: 14px;
+    }
+}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>轨道交通图 - 交互式SVG地图</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="toolbar">
+        <div class="toolbar-title">轨道交通线路图</div>
+        <label for="mapSelector" class="map-selector-label">选择地图</label>
+        <select id="mapSelector" class="map-selector">
+            <option value="鲤湖湾州及鲤城.json" selected>鲤湖湾州及鲤城</option>
+            <option value="全图.json">全图</option>
+            <option value="大都会辖地.json">大都会辖地</option>
+            <option value="第三城.json">第三城</option>
+            <option value="铜钿城.json">铜钿城</option>
+            <option value="铁路.json">铁路</option>
+        </select>
+        <div class="status" id="statusMsg">⏳ 加载中...</div>
+        <button class="info-btn" id="infoBtn" title="说明" style="display:none;">i</button>
+    </div>
+    <div id="container">
+        <svg id="railSvg" width="100%" height="100%"></svg>
+        <div class="zoom-controls">
+            <button id="zoomIn" title="放大">＋</button>
+            <button id="zoomOut" title="缩小">－</button>
+            <button id="resetViewBtn" title="重置视图 (Esc)">⟲</button>
+        </div>
+
+        <!-- 左下角时钟组件 -->
+        <div class="clock-widget" id="clockWidget">
+            <canvas id="analogClockCanvas" width="675" height="675"></canvas>
+            <div class="clock-tz-bar">
+                <span class="clock-tz-label" id="currentTimezoneLabel">加载中...</span>
+            </div>
+            <select id="timezoneSelect" class="clock-select"></select>
+        </div>
+    </div>
+
+    <!-- 欢迎弹窗 -->
+    <div class="welcome-overlay" id="welcomeOverlay" style="display:none;">
+        <div class="welcome-modal">
+            <button class="welcome-close" id="welcomeClose" title="关闭">✕</button>
+            <p>这是一个简单的以SVG为基础的线路展示。页面是我的一个简单想法，因而内容有些简陋。</p>
+            <p>访问主站请前往 <a href="https://metro.liyv.me" target="_blank" class="welcome-link">metro.liyv.me</a></p>
+            <button class="welcome-confirm" id="welcomeConfirm">我已知晓</button>
+        </div>
+    </div>
+
+    <!-- JS -->
+    <script src="js/main.js"></script>
+    <script>
+        // 欢迎弹窗逻辑（基于 sessionStorage，每次从外部打开页面均会显示）
+        (function() {
+            const overlay = document.getElementById('welcomeOverlay');
+            const infoBtn = document.getElementById('infoBtn');
+            const isFirstVisit = !sessionStorage.getItem('mapsvg_welcomed');
+
+            function closeWelcome() {
+                overlay.style.display = 'none';
+                sessionStorage.setItem('mapsvg_welcomed', '1');
+                infoBtn.style.display = 'flex';
+            }
+            function openWelcome() {
+                overlay.style.display = 'flex';
+            }
+
+            document.getElementById('welcomeClose').addEventListener('click', closeWelcome);
+            document.getElementById('welcomeConfirm').addEventListener('click', closeWelcome);
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) closeWelcome();
+            });
+            infoBtn.addEventListener('click', openWelcome);
+
+            if (isFirstVisit) {
+                overlay.style.display = 'flex';
+            } else {
+                infoBtn.style.display = 'flex';
+            }
+        })();
+
+        // 时钟组件（多时区指针表盘）
+        (function() {
+            const TIMEZONE_LIST = [
+                { value: "auto", label: "本地时区 (自动检测)" },
+                { value: "Asia/Shanghai", label: "北京时间 (CST, UTC+8)" },
+                { value: "Asia/Tokyo", label: "东京时间 (JST, UTC+9)" },
+                { value: "America/New_York", label: "纽约时间 (EST, UTC-5)" },
+                { value: "America/Los_Angeles", label: "洛杉矶时间 (PST, UTC-8)" },
+                { value: "Europe/London", label: "伦敦时间 (GMT, UTC+0)" },
+                { value: "Europe/Berlin", label: "柏林时间 (CET, UTC+1)" },
+                { value: "Australia/Sydney", label: "悉尼时间 (AEDT, UTC+11)" },
+                { value: "Asia/Kolkata", label: "孟买时间 (IST, UTC+5:30)" },
+                { value: "Asia/Seoul", label: "首尔时间 (KST, UTC+9)" },
+                { value: "Europe/Moscow", label: "莫斯科时间 (MSK, UTC+3)" },
+                { value: "America/Sao_Paulo", label: "圣保罗时间 (BRT, UTC-3)" },
+                { value: "Pacific/Auckland", label: "奥克兰时间 (NZDT, UTC+13)" },
+                { value: "Asia/Dubai", label: "迪拜时间 (GST, UTC+4)" }
+            ];
+
+            const canvas = document.getElementById('analogClockCanvas');
+            const ctx = canvas.getContext('2d');
+            const tzSelect = document.getElementById('timezoneSelect');
+            const tzLabel = document.getElementById('currentTimezoneLabel');
+            let currentTimezone = "auto";
+            let intervalId = null;
+
+            canvas.width = 675;
+            canvas.height = 675;
+
+            function getTimeInTZ(tz) {
+                const now = new Date();
+                let zone = tz;
+                if (tz === "auto") {
+                    zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+                }
+                try {
+                    const fmt = new Intl.DateTimeFormat('en-US', {
+                        timeZone: zone, hour: '2-digit', minute: '2-digit',
+                        second: '2-digit', hour12: false
+                    });
+                    const parts = fmt.formatToParts(now);
+                    let h = 0, m = 0, s = 0;
+                    for (let i = 0; i < parts.length; i++) {
+                        if (parts[i].type === 'hour') h = parseInt(parts[i].value, 10);
+                        if (parts[i].type === 'minute') m = parseInt(parts[i].value, 10);
+                        if (parts[i].type === 'second') s = parseInt(parts[i].value, 10);
+                    }
+                    if (h === 24) h = 0;
+                    return { hours: h, minutes: m, seconds: s };
+                } catch (e) {
+                    const fb = new Date();
+                    return { hours: fb.getHours(), minutes: fb.getMinutes(), seconds: fb.getSeconds() };
+                }
+            }
+
+
+            function drawClock(hours, minutes, seconds) {
+                if (!ctx) return;
+                const w = canvas.width, h = canvas.height;
+                const cx = w / 2, cy = h / 2, r = w * 0.42;
+
+                ctx.clearRect(0, 0, w, h);
+                ctx.save();
+
+                // 表盘底纹
+                ctx.beginPath();
+                ctx.arc(cx, cy, r + 6, 0, Math.PI * 2);
+                ctx.fillStyle = "#fff9ef";
+                ctx.fill();
+                ctx.shadowColor = "rgba(0,0,0,0.2)";
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.fillStyle = "#fef5e3";
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // 外圈
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = "#c0b28a"; ctx.lineWidth = 2.5; ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(cx, cy, r - 3, 0, Math.PI * 2);
+                ctx.strokeStyle = "#e8dbbc"; ctx.lineWidth = 1.2; ctx.stroke();
+
+                // 数字
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                for (let i = 1; i <= 12; i++) {
+                    const a = (i * 30 - 90) * Math.PI / 180;
+                    const tr = r - 18;
+                    ctx.fillStyle = "#2c3e44";
+                    ctx.font = "500 " + (r * 0.12) + "px 'Segoe UI',sans-serif";
+                    ctx.fillText(i.toString(), cx + tr * Math.cos(a), cy + tr * Math.sin(a));
+                }
+
+                // 刻度
+                for (let j = 0; j < 60; j++) {
+                    const a2 = (j * 6 - 90) * Math.PI / 180;
+                    const isHour = (j % 5 === 0);
+                    const s1 = isHour ? r - 26 : r - 20;
+                    const s2 = r - 12;
+                    ctx.beginPath();
+                    ctx.moveTo(cx + s1 * Math.cos(a2), cy + s1 * Math.sin(a2));
+                    ctx.lineTo(cx + s2 * Math.cos(a2), cy + s2 * Math.sin(a2));
+                    ctx.lineWidth = isHour ? 2 : 1;
+                    ctx.strokeStyle = isHour ? "#6b4c3b" : "#a59173";
+                    ctx.stroke();
+                }
+
+                // 指针
+                const h12 = hours % 12;
+                const ha = (h12 * 30 + minutes * 0.5 + seconds * (0.5 / 60)) * Math.PI / 180 - Math.PI / 2;
+                const ma = (minutes * 6 + seconds * 0.1) * Math.PI / 180 - Math.PI / 2;
+                const sa = (seconds * 6) * Math.PI / 180 - Math.PI / 2;
+
+                ctx.shadowColor = "rgba(0,0,0,0.3)"; ctx.shadowBlur = 3;
+                ctx.beginPath(); ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + r * 0.48 * Math.cos(ha), cy + r * 0.48 * Math.sin(ha));
+                ctx.lineWidth = 5; ctx.lineCap = "round"; ctx.strokeStyle = "#1f2f3c"; ctx.stroke();
+
+                ctx.beginPath(); ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + r * 0.68 * Math.cos(ma), cy + r * 0.68 * Math.sin(ma));
+                ctx.lineWidth = 3.5; ctx.strokeStyle = "#2c4c6c"; ctx.stroke();
+
+                ctx.beginPath(); ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + r * 0.75 * Math.cos(sa), cy + r * 0.75 * Math.sin(sa));
+                ctx.lineWidth = 1.8; ctx.strokeStyle = "#d64531"; ctx.shadowBlur = 2; ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(cx - 6 * Math.cos(sa), cy - 6 * Math.sin(sa), 3, 0, Math.PI * 2);
+                ctx.fillStyle = "#d64531"; ctx.fill();
+
+                // 中心轴
+                ctx.shadowBlur = 0;
+                ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+                ctx.fillStyle = "#d9c9a3"; ctx.fill();
+                ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "#826c48"; ctx.fill();
+                ctx.beginPath(); ctx.arc(cx, cy, 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = "#f5e7c8"; ctx.fill();
+
+                ctx.beginPath(); ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+                ctx.strokeStyle = "rgba(255,245,200,0.4)"; ctx.lineWidth = 1; ctx.stroke();
+                ctx.restore();
+            }
+
+            function refreshClock() {
+                const t = getTimeInTZ(currentTimezone);
+                drawClock(t.hours, t.minutes, t.seconds);
+                tzLabel.textContent = pad(t.hours) + ':' + pad(t.minutes) + ':' + pad(t.seconds);
+            }
+
+            function pad(n) {
+                return n < 10 ? '0' + n : '' + n;
+            }
+
+            function initClock() {
+                TIMEZONE_LIST.forEach(function(tz) {
+                    let opt = document.createElement('option');
+                    opt.value = tz.value; opt.textContent = tz.label;
+                    tzSelect.appendChild(opt);
+                });
+                tzSelect.value = "auto";
+                tzSelect.addEventListener('change', function() {
+                    currentTimezone = this.value;
+                    refreshClock();
+                });
+                refreshClock();
+                intervalId = setInterval(refreshClock, 1000);
+                document.addEventListener('visibilitychange', function() {
+                    if (!document.hidden) refreshClock();
+                });
+            }
+
+            initClock();
+        })();
+    </script>
+</body>
+</html>
