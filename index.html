@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>线路图svg版</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/sql.js@1.8.0/dist/sql-wasm.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+<div id="loading-overlay" class="loading-overlay" role="status" aria-live="polite" aria-busy="true">
+    <div class="loading-spinner">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+    </div>
+    <div class="loading-text">正在加载数据库...</div>
+    <div class="loading-sub">请稍候</div>
+</div>
+
+<button id="toggle-sidebar" class="shifted" title="切换侧边栏" aria-label="切换侧边栏" aria-controls="sidebar" aria-expanded="true">☰</button>
+<!-- 状态提示条 -->
+<div id="statusBar" class="status-bar empty" role="status" aria-live="polite">未选中任何内容</div>
+<h1 class="visually-hidden">城市地铁线路图</h1>
+<!-- 左侧面板 -->
+<aside id="sidebar" aria-label="线路列表">
+    <h2 class="sidebar-header">🚇 线路列表（可多选）</h2>
+
+    <div class="category-bar" id="categoryBar" role="group" aria-label="线路分类">
+        <button class="category-btn" data-category="all">全部</button>
+        <button class="category-btn active" data-category="metro">🚇 地铁</button>
+        <button class="category-btn" data-category="high_speed">🚄 高铁</button>
+        <button class="category-btn" data-category="airplane">✈️ 飞机</button>
+        <button class="category-btn" data-category="boat">🚢 轮船</button>
+        <button class="category-btn" data-category="cable_car">🚡 缆车</button>
+    </div>
+
+    <div class="search-box" role="search">
+        <input type="text" id="searchInput" placeholder="搜索线路 (名称/中文/英文)" />
+    </div>
+    <ul class="lines-list" id="linesList"></ul>
+    <!-- 取消选中按钮（始终显示，无选中时禁用） -->
+    <div class="deselect-actions" id="deselectActions" role="group" aria-label="取消选中操作">
+        <button class="deselect-btn deselect-all" id="deselectAllBtn" disabled>取消所有选中</button>
+        <button class="deselect-btn deselect-last" id="deselectLastBtn" disabled>取消最近一次选中</button>
+    </div>
+</aside>
+
+<!-- 右侧固定站点信息面板 -->
+<aside id="detail-panel" aria-label="站点详情">
+    <button class="detail-close-btn" id="closeDetailBtn" title="隐藏面板">&times;</button>
+    <div class="detail-content" id="detailContent">
+        <div class="section" id="detailName"><em>请点击站点查看</em></div>
+        <div class="section" id="detailLines"></div>
+        <div class="section" id="detailExits"></div>
+    </div>
+</aside>
+
+<div id="map" role="application" aria-label="地铁线路图"></div>
+
+<!-- 右下角自定义控件组 -->
+<div class="custom-controls" role="group" aria-label="地图视图控制">
+    <button class="ctrl-btn ctrl-zoom-in" id="ctrlZoomIn" title="放大" aria-label="放大">+</button>
+    <button class="ctrl-btn ctrl-zoom-out" id="ctrlZoomOut" title="缩小" aria-label="缩小">−</button>
+    <button class="ctrl-btn ctrl-reset" id="ctrlReset" title="重置视图" aria-label="重置视图">⟳</button>
+</div>
+<!-- 右下角访问主站提示 -->
+<a class="site-credit" href="https://metro.liyv.me" target="_blank" rel="noopener noreferrer" title="访问主站">访问主站请前往 metro.liyv.me</a>
+<script src="script.js"></script>
+</body>
+</html>
