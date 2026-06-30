@@ -3,30 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>轨道交通线路图 · 固定侧边栏</title>
+    <title>线路图svg版</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/sql.js@1.8.0/dist/sql-wasm.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-<div id="loading-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; background:#f0f2f5; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#1a1a2e; font-family:inherit;">
+<div id="loading-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%;
+background:#f0f2f5; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#1a1a2e; font-family:inherit;">
     <div style="font-size:2rem; margin-bottom:12px;">⏳</div>
-    <div style="font-size:1rem;">正在加载数据库 metro.db（全模式）...</div>
+    <div style="font-size:1rem;">正在加载数据库...</div>
     <div style="font-size:0.8rem; margin-top:8px; color:#666;">请稍候</div>
 </div>
 
 <button id="toggle-sidebar" class="shifted" title="侧边栏">☰</button>
-
 <!-- 状态提示条 -->
 <div id="statusBar" class="status-bar empty">未选中任何内容</div>
-
 <!-- 左侧面板 -->
 <div id="sidebar">
-    <div class="sidebar-header">
-        <h2>🚇 线路列表</h2>
-        <div class="subtitle">地铁 · 高铁 · 飞机 · 轮船 · 缆车（可多选）</div>
-    </div>
+    <h2 class="sidebar-header">🚇 线路列表（可多选）</h2>
 
     <div class="category-bar" id="categoryBar">
         <button class="category-btn" data-category="all">全部</button>
@@ -41,7 +37,11 @@
         <input type="text" id="searchInput" placeholder="搜索线路 (名称/中文/英文)" />
     </div>
     <div class="lines-list" id="linesList"></div>
-    <button class="show-all-btn" id="showAllBtn">访问主站请前往 metro.liyv.me</button>
+    <!-- 取消选中按钮（始终显示，无选中时禁用） -->
+    <div class="deselect-actions" id="deselectActions">
+        <button class="deselect-btn deselect-all" id="deselectAllBtn" disabled>取消所有选中</button>
+        <button class="deselect-btn deselect-last" id="deselectLastBtn" disabled>取消最近一次选中</button>
+    </div>
 </div>
 
 <!-- 右侧固定站点信息面板 -->
@@ -59,6 +59,14 @@
 
 <div id="map"></div>
 
+<!-- 右下角自定义控件组 -->
+<div class="custom-controls">
+    <button class="ctrl-btn ctrl-zoom-in" id="ctrlZoomIn" title="放大">+</button>
+    <button class="ctrl-btn ctrl-zoom-out" id="ctrlZoomOut" title="缩小">−</button>
+    <button class="ctrl-btn ctrl-reset" id="ctrlReset" title="重置视图">⟳</button>
+</div>
+<!-- 右下角访问主站提示 -->
+<a class="site-credit" href="https://metro.liyv.me" target="_blank" title="访问主站">访问主站请前往 metro.liyv.me</a>
 <script src="script.js"></script>
 </body>
 </html>
