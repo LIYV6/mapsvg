@@ -1,6 +1,7 @@
 # 🚇 线路图 SVG 版
 
 基于 Leaflet 的交互式交通线路图，使用 SQLite 数据库存储线路与站点数据，支持多路线路同时高亮查看。
+本仓库现已经归档，仅作历史副本。
 
 ## 📁 项目结构
 
@@ -38,7 +39,7 @@ routemap/
 
 - 数据文件：`metro.db`（SQLite）
 - 包含表：`routes`、`stations`、`transfers`、`nearby_transfers`、`exits`
-- 主站地址：[metro.liyv.me](https://metro.liyv.me)
+- 主站地址：[点击这里](https://metro.liyv.me)（2027-03-15前）
 
 ## 🧱 script.js 架构概览
 
